@@ -1,0 +1,12 @@
+name: Tpa
+version: 1.1
+description: Allows players to request to teleport to each other.
+author: QHencekl
+main: io.github.qhenckel.Tpa.Tpa
+commands:
+  tpr:
+    usage: /tpr [player name]
+  tpa:
+    usage: /tpa
+  tpd:
+    usage: /tpd
