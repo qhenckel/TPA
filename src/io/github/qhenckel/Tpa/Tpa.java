@@ -8,22 +8,33 @@ import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class Tpa extends JavaPlugin{
+public class Tpa extends JavaPlugin implements Listener{
 	
 	ArrayList<String> tp = new ArrayList<String>();
 	double grace;
 	//      TO      From
 	HashMap<Player, Player> teleports = new HashMap<Player, Player>();
+	HashMap<String, Location> history = new HashMap<String, Location>();
 	
 	public void onEnable() {
-		saveDefaultConfig();
-		grace = getConfig().getDouble("graceDistance");
+		getServer().getPluginManager().registerEvents(this, this);
 	}
 	
 	public void onDisable() {
 		
+	}
+	
+	public void sendMessage(Player to, Player from){
+		from.sendMessage("Telport request sent to: " + to.getName());
+		to.sendMessage(from.getName() + " Wants to teleport to you.");
+		to.sendMessage("/tpa to accept the request.");
+		to.sendMessage("/tpd to deny the request.");
+		return;
 	}
 	
 	public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args){
@@ -39,11 +50,8 @@ public class Tpa extends JavaPlugin{
 					
 					//           to from
 					teleports.put(to, from);
+					sendMessage(to, from);
 					
-					from.sendMessage("Telport request sent to: " + to.getName());
-					to.sendMessage(from.getName() + " Wants to teleport to you.");
-					to.sendMessage("/tpa to accept the request.");
-					to.sendMessage("/tpd to deny the request.");
 					return true;
 				} else {
 					p.sendMessage("That player doesn't exsist!");
@@ -58,9 +66,7 @@ public class Tpa extends JavaPlugin{
 					return true;
 				}
 				Player from = teleports.get(to);
-				
-//				long delay = getConfig().getLong("tpDelay");
-//				Bukkit.getScheduler().scheduleSyncDelayedTask(this, new Teleport(to, from, from.getLocation(), grace), delay * 20);
+
 				from.teleport(to);
 				to.sendMessage("Teleporting " + from.getName());
 				from.sendMessage(to.getName() + " Accepted your request.");
@@ -79,6 +85,35 @@ public class Tpa extends JavaPlugin{
 				
 				to.sendMessage("Request denied.");
 				from.sendMessage(to.getName() + " denied your Teleport request.");
+				return true;
+			}
+			
+			if(cmd.getName().equalsIgnoreCase("tpall")) {
+				Player to = p;
+				for(Player from : Bukkit.getOnlinePlayers()){
+					teleports.put(to, from);
+					sendMessage(to, from);
+				}
+				return true;
+			}
+			
+			if(cmd.getName().equalsIgnoreCase("back")){
+				Location fLoc = history.get(p.getPlayer().getName() + "1");
+				Location sLoc = history.get(p.getPlayer().getName() + "2");
+				if(sLoc == null){
+					if(fLoc == null){
+						p.sendMessage("No Location to return to!");
+						return true;
+					} else {
+						p.sendMessage("Returning to last teleport.");
+						p.teleport(fLoc);
+						return true;
+					}
+				} else {
+					p.sendMessage("Returning to last teleport.");
+					p.teleport(sLoc);
+					return true;
+				}
 			}
 		} else {
 			sender.sendMessage("you must be a player");
@@ -86,27 +121,16 @@ public class Tpa extends JavaPlugin{
 		return false;
 	}
 	
-	public class Teleport implements Runnable {
-    	
-    	double grace;
-    	Player to;
-    	Player from;
-    	Location fLoc;
-    	
-    	public Teleport(Player t, Player f, Location l, double g){
-    		to = t;
-    		from = f;
-    		fLoc = l;
-    		grace = g;
-    	}
-    	
-		public void run() {
-			if(from.getLocation().distance(fLoc) > grace){
-				from.teleport(to);
-			} else {
-				from.sendMessage("You moved! Teleport failed!");
-			}
+	@EventHandler
+    public void onTeleport(PlayerTeleportEvent e) {
+		String first = e.getPlayer().getName() + "1";
+		String sec = e.getPlayer().getName() + "2";
+		
+		if(history.containsKey(first)){
+			history.put(sec, history.get(first));
 		}
-	    
-	}
+		history.put(first, e.getTo());
+		return;
+    }
+	
 }
